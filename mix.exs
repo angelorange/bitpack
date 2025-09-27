@@ -60,7 +60,7 @@ defmodule Bitpack.MixProject do
   defp package do
     [
       name: "bitpack",
-      files: ~w(lib .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
+      files: ~w(lib examples .formatter.exs mix.exs README* LICENSE* CHANGELOG*),
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
