@@ -1,7 +1,7 @@
 defmodule BPX.CLI do
   @moduledoc """
   Command-line interface for BPX compression operations.
-  
+
   Supports packing and unpacking files with automatic compression algorithm selection.
   """
 
@@ -58,11 +58,11 @@ defmodule BPX.CLI do
   defp parse_pack_options([], acc), do: acc
 
   defp parse_pack_options(["--algos", algos_str | rest], acc) do
-    algos = 
+    algos =
       algos_str
       |> String.split(",")
       |> Enum.map(&String.to_atom/1)
-    
+
     parse_pack_options(rest, [{:algos, algos} | acc])
   end
 
@@ -81,33 +81,36 @@ defmodule BPX.CLI do
     case File.read(input_file) do
       {:ok, data} ->
         IO.puts("Packing #{input_file} (#{format_bytes(byte_size(data))})...")
-        
+
         algos = Keyword.get(opts, :algos, [:zstd, :brotli, :deflate])
         min_gain = Keyword.get(opts, :min_gain, 16)
-        
+
         available_algos = BPX.available_algorithms()
         filtered_algos = Enum.filter(algos, &(&1 in available_algos))
-        
-        final_algos = 
+
+        final_algos =
           if filtered_algos == [] do
             IO.puts(:stderr, "Warning: No requested algorithms available, using :deflate")
             [:deflate]
           else
             filtered_algos
           end
-        
+
         envelope = BPX.wrap_auto(data, algos: final_algos, min_gain: min_gain)
-        
+
         case File.write(output_file, envelope) do
           :ok ->
             {:ok, info} = BPX.inspect_envelope(envelope)
-            
+
             IO.puts("✓ Packed successfully!")
             IO.puts("  Algorithm: #{info.algorithm}")
             IO.puts("  Original:  #{format_bytes(info.original_size)}")
             IO.puts("  Envelope:  #{format_bytes(info.envelope_size)}")
-            IO.puts("  Saved:     #{format_bytes(info.original_size - info.envelope_size)} (#{Float.round(info.compression_ratio * 100, 1)}%)")
-            
+
+            IO.puts(
+              "  Saved:     #{format_bytes(info.original_size - info.envelope_size)} (#{Float.round(info.compression_ratio * 100, 1)}%)"
+            )
+
           {:error, reason} ->
             IO.puts(:stderr, "Failed to write output: #{:file.format_error(reason)}")
             System.halt(1)
@@ -123,7 +126,7 @@ defmodule BPX.CLI do
     case File.read(input_file) do
       {:ok, envelope} ->
         IO.puts("Unpacking #{input_file} (#{format_bytes(byte_size(envelope))})...")
-        
+
         case BPX.unwrap(envelope) do
           {:ok, data, meta} ->
             case File.write(output_file, data) do
@@ -133,7 +136,7 @@ defmodule BPX.CLI do
                 IO.puts("  Envelope:  #{format_bytes(byte_size(envelope))}")
                 IO.puts("  Original:  #{format_bytes(meta.original_size)}")
                 IO.puts("  Restored:  #{format_bytes(byte_size(data))}")
-                
+
               {:error, reason} ->
                 IO.puts(:stderr, "Failed to write output: #{:file.format_error(reason)}")
                 System.halt(1)
@@ -176,12 +179,15 @@ defmodule BPX.CLI do
   end
 
   defp format_bytes(bytes) when bytes < 1024, do: "#{bytes}B"
+
   defp format_bytes(bytes) when bytes < 1024 * 1024 do
     "#{Float.round(bytes / 1024, 1)}KB"
   end
+
   defp format_bytes(bytes) when bytes < 1024 * 1024 * 1024 do
     "#{Float.round(bytes / (1024 * 1024), 1)}MB"
   end
+
   defp format_bytes(bytes) do
     "#{Float.round(bytes / (1024 * 1024 * 1024), 1)}GB"
   end

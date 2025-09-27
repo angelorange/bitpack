@@ -15,11 +15,11 @@ defmodule Bitpack.MixProject do
         main_module: Bitpack.CLI,
         name: "bitpack"
       ],
-      
+
       # Hex package configuration
       package: package(),
       description: description(),
-      
+
       # Documentation
       name: "Bitpack",
       docs: docs()
@@ -78,9 +78,9 @@ defmodule Bitpack.MixProject do
       source_url: @source_url,
       extras: ["README.md", "CHANGELOG.md"],
       groups_for_modules: [
-        "Core": [Bitpack],
-        "BPX": [BPX],
-        "CLI": [Bitpack.CLI, BPX.CLI]
+        Core: [Bitpack],
+        BPX: [BPX],
+        CLI: [Bitpack.CLI, BPX.CLI]
       ]
     ]
   end

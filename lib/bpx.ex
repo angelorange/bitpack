@@ -43,15 +43,15 @@ defmodule BPX do
 
   @type algorithm :: :none | :deflate | :brotli | :zstd
   @type wrap_options :: [
-    algos: [algorithm()],
-    min_gain: non_neg_integer()
-  ]
+          algos: [algorithm()],
+          min_gain: non_neg_integer()
+        ]
   @type meta :: %{
-    algorithm: algorithm(),
-    original_size: non_neg_integer(),
-    compressed_size: non_neg_integer(),
-    compression_ratio: float()
-  }
+          algorithm: algorithm(),
+          original_size: non_neg_integer(),
+          compressed_size: non_neg_integer(),
+          compression_ratio: float()
+        }
 
   @doc """
   Compress data automatically.
@@ -102,7 +102,7 @@ defmodule BPX do
 
     # Uses compression only if it saves at least min_gain bytes
     {final_alg, final_data, final_size} =
-      if best_alg != :none and (original_size - best_size) >= min_gain do
+      if best_alg != :none and original_size - best_size >= min_gain do
         {best_alg, best_data, best_size}
       else
         {:none, data, original_size}
@@ -133,12 +133,11 @@ defmodule BPX do
     with {:ok, header, payload} <- parse_header(envelope),
          {:ok, data} <- decompress(payload, header.algorithm),
          :ok <- validate_data(data, header) do
-
       compression_ratio =
         if header.original_size == 0 do
           0.0
         else
-          1.0 - (header.compressed_size / header.original_size)
+          1.0 - header.compressed_size / header.original_size
         end
 
       meta = %{
@@ -171,11 +170,12 @@ defmodule BPX do
   # Parses the envelope header
   defp parse_header(envelope) do
     case envelope do
-      <<@magic::binary, @version::8, alg_id::8, orig_size::32-big,
-        comp_size::32-big, crc32::32-big, payload::binary>> ->
-
+      <<@magic::binary, @version::8, alg_id::8, orig_size::32-big, comp_size::32-big,
+        crc32::32-big, payload::binary>> ->
         case Map.get(@algorithms, alg_id) do
-          nil -> {:error, "unknown algorithm: #{alg_id}"}
+          nil ->
+            {:error, "unknown algorithm: #{alg_id}"}
+
           algorithm ->
             header = %{
               algorithm: algorithm,
@@ -183,6 +183,7 @@ defmodule BPX do
               compressed_size: comp_size,
               crc32: crc32
             }
+
             {:ok, header, payload}
         end
 
@@ -196,6 +197,7 @@ defmodule BPX do
 
   # Compresses data with the specified algorithm
   defp compress(data, :none), do: {:ok, data}
+
   defp compress(data, :deflate) do
     try do
       compressed = :zlib.compress(data)
@@ -204,6 +206,7 @@ defmodule BPX do
       _ -> {:error, :deflate_failed}
     end
   end
+
   defp compress(data, :brotli) do
     if Code.ensure_loaded?(:brotli) do
       try do
@@ -216,6 +219,7 @@ defmodule BPX do
       {:error, :brotli_not_available}
     end
   end
+
   defp compress(data, :zstd) do
     if Code.ensure_loaded?(:zstd) do
       try do
@@ -231,6 +235,7 @@ defmodule BPX do
 
   # Decompresses data with the specified algorithm
   defp decompress(data, :none), do: {:ok, data}
+
   defp decompress(data, :deflate) do
     try do
       decompressed = :zlib.uncompress(data)
@@ -239,6 +244,7 @@ defmodule BPX do
       _ -> {:error, :deflate_decompression_failed}
     end
   end
+
   defp decompress(data, :brotli) do
     if Code.ensure_loaded?(:brotli) do
       try do
@@ -251,6 +257,7 @@ defmodule BPX do
       {:error, :brotli_not_available}
     end
   end
+
   defp decompress(data, :zstd) do
     if Code.ensure_loaded?(:zstd) do
       try do
@@ -318,7 +325,7 @@ defmodule BPX do
           if header.original_size == 0 do
             0.0
           else
-            1.0 - (header.compressed_size / header.original_size)
+            1.0 - header.compressed_size / header.original_size
           end
 
         info = %{
@@ -328,9 +335,11 @@ defmodule BPX do
           compression_ratio: compression_ratio,
           envelope_size: byte_size(envelope)
         }
+
         {:ok, info}
 
-      error -> error
+      error ->
+        error
     end
   end
 end
