@@ -8,7 +8,10 @@ defmodule Bitpack.MixProject do
       elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      escript: escript()
+      escript: [
+        main_module: Bitpack.CLI,
+        name: "bitpack"
+      ]
     ]
   end
 
@@ -19,18 +22,19 @@ defmodule Bitpack.MixProject do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  # Specifies your project dependencies.
+  #
+  # Type "mix help deps" for examples and options.
   defp deps do
     [
-      {:ex_doc, "~> 0.32", only: :dev, runtime: false},
-      {:stream_data, "~> 0.6", only: :test},
-      {:benchee, "~> 1.3", only: :dev},
-      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
-      {:jason, "~> 1.4", only: [:dev, :test]}
+      {:jason, "~> 1.4"},
+      {:stream_data, "~> 1.0", only: :test},
+      {:benchee, "~> 1.0", only: :dev},
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
-  end
-
-  defp escript do
-    [main_module: Bitpack.CLI]
   end
 end
