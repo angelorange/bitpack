@@ -19,7 +19,7 @@ Converts `[map()]` ↔ compact binary according to a spec (schema) of bits per f
 ## Quick example
 
 ```elixir
-# Definir spec: campo → tipo
+# Define spec: field → type
 spec = [
   {:status, {:u, 3}},    # unsigned 3 bits (0-7)
   {:vip, {:bool}},       # boolean 1 bit
@@ -28,17 +28,17 @@ spec = [
   {:tag, {:bytes, 3}}    # 3 bytes fixos
 ]
 
-# Dados de exemplo
+# Exemplo de dados
 rows = [
   %{status: 2, vip: true, tries: 5, amount: 12345, tag: <<1, 2, 3>>},
   %{status: 1, vip: false, tries: 12, amount: 67890, tag: <<4, 5, 6>>}
 ]
 
-# Pack: lista de mapas → binário compacto
+# Pack: list of maps → compact binary
 binary = Bitpack.pack(rows, spec)
 IO.inspect(byte_size(binary))  # ~14 bytes (vs ~200+ bytes JSON)
 
-# Unpack: binário → lista de mapas
+# Unpack: compact binary → list of maps
 restored = Bitpack.unpack(binary, spec)
 IO.inspect(restored == rows)   # true
 ```
@@ -85,10 +85,10 @@ Convert NDJSON ↔ bitpack:
   {:metadata, {:bytes, 8}}
 ]
 
-# Pack: NDJSON → binário
+# Pack: NDJSON → binary
 ./bitpack pack spec.exs data.ndjson data.bin
 
-# Unpack: binário → NDJSON  
+# Unpack: binary → NDJSON  
 ./bitpack unpack spec.exs data.bin restored.ndjson
 ```
 
@@ -103,6 +103,77 @@ Convert NDJSON ↔ bitpack:
 - **Specs with 0 bytes/row**: we can't distinguish between "0 rows" and "N rows of 0 bytes each"
 - **Maximum 64 bits** per integer field
 - **Fixed order**: fields must be in the same order as the spec
+
+## BPX - Binary Payload eXchange
+
+BPX is a complementary library that provides automatic compression for any binary payload. It tries multiple compression algorithms and selects the best one, wrapping the result in a self-describing envelope.
+
+### BPX Features
+
+- **Automatic Algorithm Selection**: Tries multiple compression algorithms (deflate, brotli, zstd) and picks the best
+- **Self-Describing Format**: Header contains magic bytes, version, algorithm, sizes, and CRC32 checksum
+- **Integrity Verification**: CRC32 validation ensures data integrity
+- **Configurable**: Set minimum compression gain threshold and algorithm preferences
+- **CLI Tool**: Command-line interface for file compression/decompression
+
+### BPX Usage
+
+```elixir
+# Basic usage - automatic algorithm selection
+data = "Your binary data here"
+envelope = BPX.wrap_auto(data)
+{:ok, restored_data, metadata} = BPX.unwrap(envelope)
+
+# With options
+envelope = BPX.wrap_auto(data, 
+  algos: [:zstd, :brotli, :deflate], 
+  min_gain: 32
+)
+
+# Inspect envelope without decompressing
+{:ok, info} = BPX.inspect_envelope(envelope)
+IO.puts("Algorithm: #{info.algorithm}")
+IO.puts("Compression: #{info.compression_ratio * 100}%")
+```
+
+### BPX CLI
+
+```bash
+# Compress a file
+mix run -e "BPX.CLI.main([\"pack\", \"input.txt\", \"output.bpx\"])"
+
+# Decompress a file  
+mix run -e "BPX.CLI.main([\"unpack\", \"output.bpx\", \"restored.txt\"])"
+
+# Show file information
+mix run -e "BPX.CLI.main([\"info\", \"output.bpx\"])"
+```
+
+### Integration Example
+
+Combine Bitpack's bit-level efficiency with BPX's compression:
+
+```elixir
+# IoT sensor data spec
+spec = [
+  {:timestamp, {:u, 32}},
+  {:sensor_id, {:u, 16}}, 
+  {:temperature, {:i, 12}},
+  {:humidity, {:u, 7}},
+  {:battery, {:u, 8}},
+  {:online, {:bool}},
+  {:alarm, {:bool}}
+]
+
+# Pack with Bitpack, then compress with BPX
+sensor_data = [%{timestamp: 1640995200, sensor_id: 1, ...}, ...]
+bitpack_binary = Bitpack.pack(sensor_data, spec)
+bpx_envelope = BPX.wrap_auto(bitpack_binary)
+
+# Result: 86%+ compression vs JSON with data integrity
+```
+
+Run the integration example: `mix run examples/simple_integration.ex`
 
 ## Benchmarks
 
