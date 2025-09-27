@@ -210,7 +210,7 @@ defmodule BPX do
   defp compress(data, :brotli) do
     if Code.ensure_loaded?(:brotli) do
       try do
-        compressed = :brotli.encode(data)
+        compressed = apply(:brotli, :encode, [data])
         {:ok, compressed}
       rescue
         _ -> {:error, :brotli_failed}
@@ -223,7 +223,7 @@ defmodule BPX do
   defp compress(data, :zstd) do
     if Code.ensure_loaded?(:zstd) do
       try do
-        compressed = :zstd.compress(data)
+        compressed = apply(:zstd, :compress, [data])
         {:ok, compressed}
       rescue
         _ -> {:error, :zstd_failed}
@@ -248,7 +248,7 @@ defmodule BPX do
   defp decompress(data, :brotli) do
     if Code.ensure_loaded?(:brotli) do
       try do
-        decompressed = :brotli.decode(data)
+        decompressed = apply(:brotli, :decode, [data])
         {:ok, decompressed}
       rescue
         _ -> {:error, :brotli_decompression_failed}
@@ -261,7 +261,7 @@ defmodule BPX do
   defp decompress(data, :zstd) do
     if Code.ensure_loaded?(:zstd) do
       try do
-        decompressed = :zstd.decompress(data)
+        decompressed = apply(:zstd, :decompress, [data])
         {:ok, decompressed}
       rescue
         _ -> {:error, :zstd_decompression_failed}
