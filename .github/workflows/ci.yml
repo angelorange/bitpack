@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Test & Quality Checks
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        elixir: ['1.15', '1.16']
+        otp: ['25', '26']
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: ${{ matrix.elixir }}
+        otp-version: ${{ matrix.otp }}
+        
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
+        
+    - name: Restore build cache
+      uses: actions/cache@v3
+      with:
+        path: _build
+        key: ${{ runner.os }}-build-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-build-${{ matrix.elixir }}-${{ matrix.otp }}-
+        
+    - name: Install dependencies
+      run: mix deps.get
+      
+    - name: Check formatting
+      run: mix format --check-formatted
+      
+    - name: Compile (warnings as errors)
+      run: mix compile --warnings-as-errors
+      
+    - name: Run tests
+      run: mix test --cover
+      
+    - name: Run property tests
+      run: mix test test/property_test.exs --max-cases 200
+      
+    - name: Run Dialyzer (PLT cache)
+      uses: actions/cache@v3
+      with:
+        path: priv/plts
+        key: ${{ runner.os }}-dialyzer-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-dialyzer-${{ matrix.elixir }}-${{ matrix.otp }}-
+        
+    - name: Run Dialyzer
+      run: mix dialyzer
+      
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.16'
+        otp-version: '26'
+        
+    - name: Install dependencies
+      run: mix deps.get
+      
+    - name: Run benchmarks
+      run: mix run bench/bitpack_bench.exs
+      
+  docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.16'
+        otp-version: '26'
+        
+    - name: Install dependencies
+      run: mix deps.get
+      
+    - name: Generate docs
+      run: mix docs
+      
+    - name: Upload docs artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: doc/
