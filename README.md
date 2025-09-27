@@ -4,6 +4,8 @@
 
 Bitpack transforms lists of maps into highly compressed binary formats, achieving **86-92% size reduction** compared to JSON while being **3-61x faster** to encode/decode.
 
+**Includes BPX (Binary Payload eXchange)** - A complementary compression library that automatically selects the best compression algorithm and adds data integrity verification.
+
 ## 🎯 What Problem Does This Solve?
 
 Modern applications generate massive amounts of structured data - IoT sensors, game events, financial ticks, telemetry. Traditional formats like JSON are human-readable but wasteful:
