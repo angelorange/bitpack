@@ -151,6 +151,25 @@ defmodule BPX do
     end
   end
 
+  @doc """
+  Unpacks data from BPX envelope, raising on error.
+
+  Like `unwrap/1` but raises an exception instead of returning `{:error, reason}`.
+
+  ## Examples
+
+      {data, meta} = BPX.unwrap!(envelope)
+      IO.inspect(meta.algorithm)        # :deflate
+      IO.inspect(meta.compression_ratio) # 0.75 (25% of compression)
+  """
+  @spec unwrap!(binary()) :: {binary(), meta()}
+  def unwrap!(envelope) when is_binary(envelope) do
+    case unwrap(envelope) do
+      {:ok, data, meta} -> {data, meta}
+      {:error, reason} -> raise "BPX unwrap failed: #{reason}"
+    end
+  end
+
   # Builds the envelope with header + payload
   defp build_envelope(algorithm, orig_size, comp_size, crc32, payload) do
     alg_id = Map.fetch!(@algorithm_ids, algorithm)
